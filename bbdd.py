@@ -1,26 +1,38 @@
 import json
-import os
+import lmdb
 
 
 class AlphabeticalDirectory:
-    def __init__(self, filename="data.txt"):
+    def __init__(self, filename="data"):
         self.filename = filename
         self.size = 26
         self.table = [[] for _ in range(self.size)]
-        self._load_from_file()
+        
+        self.db = lmdb.open(filename)
+        
+        loaded_data = self.load(self.db, "directory")
+        if loaded_data is not None:
+            self.table = loaded_data
 
     def _hash_letter(self, word):
         """Maps the first letter to index 0-25."""
         return ord(word[0].lower()) - 97
 
-    def _save_to_file(self):
-        with open(self.filename, "w") as f:
-            json.dump(self.table, f)
+    def save(self, db, key, dictionary):
+        with db.begin(write=True) as transaction:
+            transaction.put(
+                key.encode("utf-8"), 
+                json.dumps(dictionary).encode("utf-8")
+            )
 
-    def _load_from_file(self):
-        if os.path.exists(self.filename):
-            with open(self.filename, "r") as f:
-                self.table = json.load(f)
+    def load(self, db, key):
+        with db.begin() as transaction:
+            data = transaction.get(key.encode("utf-8"))
+            
+        if data is None:
+            return None
+        
+        return json.loads(data.decode("utf-8"))
 
     def insert(self, word):
         index = self._hash_letter(word)
@@ -29,7 +41,7 @@ class AlphabeticalDirectory:
             return self.table[index].index(word)
 
         self.table[index].append(word)
-        self._save_to_file()
+        self.save(self.db, "directory", self.table)
 
         return len(self.table[index]) - 1
 
@@ -42,10 +54,10 @@ class AlphabeticalDirectory:
         index = self._hash_letter(word)
         if word in self.table[index]:
             self.table[index].remove(word)
-            self._save_to_file()
+            self.save(self.db, "directory", self.table)
 
 
-directory = AlphabeticalDirectory("data.txt")
+directory = AlphabeticalDirectory("data")
 directory.insert("boat")
 directory.insert("from")
 directory.insert("sail")
