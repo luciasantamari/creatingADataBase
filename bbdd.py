@@ -14,6 +14,9 @@ class AlphabeticalDirectory:
         if loaded_data is not None:
             self.table = loaded_data
 
+    def close(self):
+        self.db.close()
+
     def _hash_letter(self, word):
         """Maps the first letter to index 0-25."""
         return ord(word[0].lower()) - 97
