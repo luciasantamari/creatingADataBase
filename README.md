@@ -1,88 +1,101 @@
-# Product Backlog — Lightweight Key-Value Database
+# Product Backlog — Lightweight String Database
 
 ## 1. Project Overview
 
-The goal of this project is to develop a lightweight, persistent key-value database using Python.
+The goal of this project is to develop a lightweight, persistent database for **text strings** using Python.
 
-The database should be simple to use, efficient for basic operations, and capable of storing data without loading all records into memory.
+The database should be simple to use, efficient for basic operations, and eventually capable of accessing stored data without loading every record into memory.
 
-The initial version will use an append-only log file and an in-memory hash index. More advanced features may be implemented in later development phases.
+The **first iteration** provides an alphabetical directory with string insertion, searching, deletion, and JSON-based persistence. A **planned second iteration** will introduce an append-only log file and an in-memory hash index with file offsets. More advanced features may be implemented in later phases.
 
 ### Main Objectives
 
-- Provide fast key-value storage and retrieval.
+- Provide fast string insertion, searching, and deletion.
 - Preserve data between application restarts.
-- Minimize memory usage.
+- Reduce unnecessary disk writes and memory usage.
 - Keep the architecture simple and modular.
 - Ensure reliability through automated testing.
 
 ## 2. Product Backlog
 
-User stories follow the INVEST principles and are prioritized using the MoSCoW method.
+User stories are written with the INVEST principles in mind and prioritized using the MoSCoW method.
 
-Story points are preliminary estimates that should be validated by the development team.
+Story points are preliminary estimates and should be validated by the development team.
 
-| ID | User Story | Priority | Story Points | Completed |
-|---|---|---|---|---:|
-| US-01 | As a user, I want to store a key-value pair so that I can save information for later use. | Must | 3 | ✔️ |
-| US-02 | As a user, I want to retrieve a value using its key so that I can access stored information quickly. | Must | 3 | ✔️ |
-| US-03 | As a user, I want to delete a key-value pair so that I can remove information I no longer need. | Must | 3 | ✔️ |
-| US-04 | As a user, I want my data to remain available after restarting the application so that I do not lose previously stored records. | Must | 5 | ✔️ |
-| US-05 | As a developer, I want automated unit tests so that I can verify the database operations behave correctly. | Must | 3 | ❌ |
-| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 | ❌ |
-| US-07 | As a user, I want to update an existing key so that I can modify information without creating duplicate active entries. | Should | 2 | ❌ |
-| US-08 | As a user, I want invalid inputs to be handled predictably so that incorrect operations do not corrupt the database. | Should | 3 | ❌ |
-| US-09 | As a user, I want the database to recover from an incomplete final record so that an interrupted write does not prevent startup. | Should | 5 | ❌ |
-| US-10 | As a user, I want obsolete records to be compacted so that the database does not waste unnecessary disk space. | Could | 8 | ❌ |
-| US-11 | As a user, I want an ordered index using a B+ tree so that I can efficiently search for keys within a range. | Won't (E1) | 13 | Using key-value for now |
-| US-12 | As a user, I want to execute SQL-like queries so that I can interact with the database using a query language. | Won't (E1) | 13 | Not currently in scope |
+### Development Status Definitions
+
+| Status | Meaning |
+|---|---|
+| **DONE** | Implemented, verified against all acceptance criteria, reviewed, and merged. |
+| **PARTIAL** | Basic functionality exists, but at least one acceptance criterion is not yet met. |
+| **IN PROGRESS** | Work has begun, but the feature is not ready for acceptance. |
+| **PLANNED** | Agreed upon but not started. |
+| **BLOCKED** | Cannot proceed until another task or decision is completed. |
+| **OUT OF SCOPE (E1)** | Intentionally excluded from the initial delivery; not necessarily excluded from the project. |
+
+> **Important:** A method existing in the code does not make a story DONE. Status is based on its complete acceptance criteria. The statuses below reflect the first iteration as reviewed, not a claim that the full test suite currently passes.
+
+| ID | User Story | Priority | Story Points | Development Status | Current State |
+|---|---|---|---:|---|---|
+| US-01 | As a user, I want to store a string so that I can access it later. | Must | 3 | **PARTIAL** | `insert(word)` works with the in-memory alphabetical buckets, but writes the entire JSON file rather than appending a record. |
+| US-02 | As a user, I want to find a stored string so that I can check whether it exists. | Must | 3 | **PARTIAL** | `search(word)` checks the relevant alphabetical bucket, not a disk-offset hash index. |
+| US-03 | As a user, I want to delete a stored string so that it is no longer available. | Must | 3 | **PARTIAL** | `delete(word)` removes a string and rewrites JSON; there are no deletion markers yet. |
+| US-04 | As a user, I want my strings to remain available after restarting the application so that they are not lost. | Must | 5 | **PARTIAL** | JSON persistence exists, but append-only replay and index reconstruction are not implemented. |
+| US-05 | As a developer, I want automated unit tests so that I can verify database operations. | Must | 3 | **IN PROGRESS** | `tests.py` exists; its imports/teardown and passing status need verification. |
+| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 | **PLANNED** | GitHub Actions workflow not yet configured. |
+| US-07 | As a user, I want duplicate insertions to have a predictable result so that no duplicate active strings are created. | Should | 2 | **PARTIAL** | The current implementation avoids duplicates in memory; this must be retained and tested with the new storage engine. |
+| US-08 | As a user, I want invalid inputs to be handled predictably so that incorrect operations do not corrupt the database. | Should | 3 | **PLANNED** | Explicit validation and error-handling rules are not yet defined. |
+| US-09 | As a user, I want the database to recover from an incomplete final record so that an interrupted write does not prevent startup. | Should | 5 | **PLANNED** | Incomplete-write recovery is not implemented. |
+| US-10 | As a user, I want obsolete records to be compacted so that disk space is not unnecessarily wasted. | Could | 8 | **PLANNED** | Compaction is deferred until append-only storage exists. |
+| US-11 | As a user, I want an ordered index using a B+ tree so that I can efficiently search strings within a range. | Won't (E1) | 13 | **OUT OF SCOPE (E1)** | An in-memory hash index is planned first. |
+| US-12 | As a user, I want to execute SQL-like queries so that I can interact with the database using a query language. | Won't (E1) | 13 | **OUT OF SCOPE (E1)** | Not included in the initial delivery. |
 
 ## 3. Acceptance Criteria
 
-### US-01 — Store Data
-- The database accepts a valid key-value pair.
-- The record is appended to the storage file.
-- The hash index stores the record's file offset.
-- The stored value can be retrieved immediately.
+### US-01 — Store Strings
+- The database accepts a valid text string.
+- A new insertion is appended to the storage file without rewriting earlier records.
+- The index stores the inserted string's file offset.
+- The string can be found immediately after insertion.
 
-### US-02 — Retrieve Data
-- Existing keys return their corresponding values.
-- Missing keys return `None`.
-- Retrieval uses the hash index rather than scanning the entire file.
+### US-02 — Find Strings
+- Existing strings can be found using the index.
+- Missing strings produce the documented not-found result (currently `-1`).
+- Searching does not require scanning all stored records.
 
-### US-03 — Delete Data
-- Existing keys can be deleted.
+### US-03 — Delete Strings
+- Existing strings can be deleted.
 - A deletion marker is appended to the storage file.
-- Deleted keys are removed from the active index.
-- Retrieving a deleted key returns `None`.
+- Deleted strings are removed from the active index.
+- A deleted string is no longer found, including after restart.
 
 ### US-04 — Data Persistence
-- Records remain available after restarting the application.
-- The hash index is reconstructed from the storage file during startup.
-- Deleted records remain logically deleted after restarting.
-- The latest value of each key is recovered.
+- Strings remain available after restarting the application.
+- The in-memory hash index is reconstructed from the storage file at startup.
+- Deleted strings remain logically deleted after restart.
+- Duplicate insertions do not create multiple active entries.
 
 ### US-05 — Unit Testing
-- Tests cover insertion, retrieval, deletion, and persistence.
-- Tests cover missing keys and repeated operations.
+- Tests cover insertion, searching, deletion, and persistence.
+- Tests cover missing strings and repeated operations.
 - Tests run successfully using `pytest`.
 
 ### US-06 — Continuous Integration
-- GitHub Actions executes the test suite automatically.
+- GitHub Actions runs the test suite automatically.
 - Tests run on pull requests targeting `main`.
 - Failed tests are reported by the workflow.
 - The workflow succeeds when all tests pass.
 
-### US-07 — Update Existing Records
-- Storing an existing key updates its current value.
-- Retrieval returns the latest value.
-- The index references the latest record.
-- The updated value survives an application restart.
+### US-07 — Duplicate Handling
+- Inserting an existing string does not create another active entry.
+- Searching still returns the existing string's recorded location or agreed result.
+- Behavior is consistent after restarting.
 
 ### US-08 — Input Validation
-- Unsupported key types are rejected with a clear error.
-- Values that cannot be serialized are rejected.
-- A rejected operation does not modify the database.
+- Non-string inputs are rejected with clear errors.
+- Empty strings are handled according to a documented policy.
+- Invalid operations do not modify stored data.
+- Unicode characters are handled consistently.
 
 ### US-09 — Incomplete Write Recovery
 - Startup detects an incomplete final record.
@@ -90,15 +103,15 @@ Story points are preliminary estimates that should be validated by the developme
 - Recovery does not silently ignore corruption in earlier records.
 
 ### US-10 — Storage Compaction
-- Compaction removes obsolete and deleted records.
-- The latest value of each active key is preserved.
-- The index remains valid after compaction.
+- Compaction removes obsolete or deleted records.
+- All active strings remain available.
+- The index is correctly rebuilt or updated after compaction.
 - The compacted file is not larger than the original file.
 
 ### US-11 — B+ Tree Index
-- Keys are maintained in sorted order.
-- Searching for existing keys returns the correct records.
-- Range queries return matching records in order.
+- Strings are maintained in sorted key order.
+- Searching for existing strings returns the correct results.
+- Range queries return matching strings in order.
 - Node splitting preserves the tree's structural invariants.
 
 ### US-12 — SQL-like Query Interface
@@ -116,46 +129,79 @@ Story points are preliminary estimates that should be validated by the developme
 | Won't Have (E1) | US-11 to US-12 | 26 |
 | **Total** | **12 stories** | **63** |
 
-Must-have stories represent approximately **30% of the estimated total effort**, remaining below the 60% threshold discussed in class.
+Must-have stories account for approximately **30% of the total estimated story points**, based on preliminary estimates. This percentage does not mean that 30% of the work is complete.
 
-The Won't Have category refers to the first delivery, not necessarily to the entire project.
+The Won't Have category refers to the first delivery, not necessarily the entire project.
 
-## 5. Definition of Done
+## 5. Development Progress
 
-A user story is considered complete when:
+### Iteration 1 — Basic Alphabetical Directory
+
+**Current implementation:** `bbdd.py` uses 26 alphabetical buckets in memory, saves them as JSON, and supports the public operations `insert(word)`, `search(word)`, and `delete(word)`.
+
+**Implemented in the initial prototype:**
+- String insertion and duplicate checks.
+- String lookup within the bucket selected by the first character.
+- String deletion.
+- Saving/loading the directory as JSON.
+- Initial test definitions in `tests.py`.
+
+**Known limitations and verification work:**
+- The entire database is loaded into RAM.
+- Insertions and deletions rewrite the entire JSON file.
+- Lookups are linear within each bucket.
+- The current `close()` implementation references an undefined `self.db` attribute.
+- Test imports and results must be verified; tests have not been marked as passing.
+- Validation for empty strings, nonletters, and other unsupported inputs needs an agreed policy.
+
+### Iteration 2 — Storage and Indexing Improvements (Planned)
+
+- Implement an append-only storage layer with byte offsets.
+- Replace the 26-bucket structure with an in-memory dictionary mapping strings to offsets.
+- Rebuild the index by replaying the storage log when opening the database.
+- Preserve the simple string-only public API.
+- Extend and run the pytest suite, including persistence and deletion-after-restart tests.
+- Configure GitHub Actions for continuous integration.
+- Measure insertion and search performance against Iteration 1.
+
+> A feature moves to **DONE** only when its acceptance criteria pass, tests have been verified, and the change has been reviewed and merged.
+
+## 6. Definition of Done
+
+A user story is complete when:
 
 1. Its acceptance criteria have been satisfied.
-2. The implementation includes appropriate unit tests.
-3. All automated tests pass locally and in GitHub Actions.
-4. The code has been reviewed and approved by another team member.
-5. The changes have been merged into `main` through a pull request.
-6. Any necessary documentation has been updated.
+2. Appropriate automated tests exist.
+3. All relevant tests pass locally and in GitHub Actions.
+4. Code has been reviewed and approved by another team member.
+5. Changes have been merged into `main` through a pull request.
+6. Documentation has been updated where necessary.
 
-## 6. Initial Delivery — E1
+## 7. Initial Delivery — E1
 
 **Deadline: November 3, 2026**
 
-The first delivery focuses on the minimum functional database.
-
-Required deliverables:
-
+Target deliverables:
 - Validated and prioritized product backlog.
 - Documented story point estimates.
-- Functional append-only storage with `set`, `get`, and `delete`.
-- Automatic hash index reconstruction on startup.
+- Functional append-only string storage with `insert`, `search`, and `delete`.
+- Automatic in-memory hash index reconstruction on startup.
 - Unit tests using `pytest`.
-- Working GitHub Actions continuous integration workflow.
+- Working GitHub Actions workflow.
 
-Advanced indexing, compaction, and query language support are deferred until later phases.
+Advanced indexing, compaction, and query-language support are deferred until later phases.
 
-## 7. Technical Constraints
+## 8. Technical Constraints
 
 - **Programming language:** Python 3.
-- **Storage:** Local append-only file.
-- **Indexing:** In-memory hash index.
+- **Stored data:** Text strings only in the current scope.
+- **Current storage:** JSON file rewritten on changes.
+- **Planned storage:** Local append-only file.
+- **Current indexing:** 26 alphabetical buckets in memory.
+- **Planned indexing:** In-memory dictionary mapping strings to byte offsets.
 - **Testing:** pytest.
 - **Version control:** Git and GitHub.
-- **Continuous integration:** GitHub Actions.
+- **Continuous integration:** GitHub Actions (planned).
 - **External dependencies:** Minimized wherever possible.
 
-The database is intended primarily as an educational project. Simplicity, correctness, maintainability, and measured performance take priority over unnecessary features.
+This is an educational project. Simplicity, correctness, maintainability, and measured performance take priority over unnecessary features.
