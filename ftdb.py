@@ -32,6 +32,10 @@ class BranchDB:
 
     def _key(self, branch, key):
         """('clientes/vip', 'luis') -> b'clientes/vip/luis'"""
+        if not key:
+            raise ValueError("The key cannot be empty")
+        if SEP in key:
+            raise ValueError(f"The key cannot contain '{SEP}' (use a sub-branch instead)")
         return self._prefix(branch) + key.encode()
 
     def _scan(self, txn, prefix):
