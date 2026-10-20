@@ -10,7 +10,7 @@ class AlphabeticalDirectory:
         self._load_from_file()
 
     def close(self):
-        self.db.close()
+    pass
         
     def _hash_letter(self, word):
         """Maps the first letter to index 0-25."""

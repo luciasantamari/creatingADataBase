@@ -1,5 +1,5 @@
 import pytest
-from directory import AlphabeticalDirectory
+from bbdd import AlphabeticalDirectory
 
 
 @pytest.fixture 
