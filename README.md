@@ -22,20 +22,20 @@ User stories follow the INVEST principles and are prioritized using the MoSCoW m
 
 Story points are preliminary estimates that should be validated by the development team.
 
-| ID | User Story | Priority | Story Points |
-|---|---|---|---:|
-| US-01 | As a user, I want to store a key-value pair so that I can save information for later use. | Must | 3 |
-| US-02 | As a user, I want to retrieve a value using its key so that I can access stored information quickly. | Must | 3 |
-| US-03 | As a user, I want to delete a key-value pair so that I can remove information I no longer need. | Must | 3 |
-| US-04 | As a user, I want my data to remain available after restarting the application so that I do not lose previously stored records. | Must | 5 |
-| US-05 | As a developer, I want automated unit tests so that I can verify the database operations behave correctly. | Must | 3 |
-| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 |
-| US-07 | As a user, I want to update an existing key so that I can modify information without creating duplicate active entries. | Should | 2 |
-| US-08 | As a user, I want invalid inputs to be handled predictably so that incorrect operations do not corrupt the database. | Should | 3 |
-| US-09 | As a user, I want the database to recover from an incomplete final record so that an interrupted write does not prevent startup. | Should | 5 |
-| US-10 | As a user, I want obsolete records to be compacted so that the database does not waste unnecessary disk space. | Could | 8 |
-| US-11 | As a user, I want an ordered index using a B+ tree so that I can efficiently search for keys within a range. | Won't (E1) | 13 |
-| US-12 | As a user, I want to execute SQL-like queries so that I can interact with the database using a query language. | Won't (E1) | 13 |
+| ID | User Story | Priority | Story Points | Completed |
+|---|---|---|---|---:|
+| US-01 | As a user, I want to store a key-value pair so that I can save information for later use. | Must | 3 | ✔️ |
+| US-02 | As a user, I want to retrieve a value using its key so that I can access stored information quickly. | Must | 3 | ✔️ |
+| US-03 | As a user, I want to delete a key-value pair so that I can remove information I no longer need. | Must | 3 | ✔️ |
+| US-04 | As a user, I want my data to remain available after restarting the application so that I do not lose previously stored records. | Must | 5 | ✔️ |
+| US-05 | As a developer, I want automated unit tests so that I can verify the database operations behave correctly. | Must | 3 | ❌ |
+| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 | ❌ |
+| US-07 | As a user, I want to update an existing key so that I can modify information without creating duplicate active entries. | Should | 2 | ❌ |
+| US-08 | As a user, I want invalid inputs to be handled predictably so that incorrect operations do not corrupt the database. | Should | 3 | ❌ |
+| US-09 | As a user, I want the database to recover from an incomplete final record so that an interrupted write does not prevent startup. | Should | 5 | ❌ |
+| US-10 | As a user, I want obsolete records to be compacted so that the database does not waste unnecessary disk space. | Could | 8 | ❌ |
+| US-11 | As a user, I want an ordered index using a B+ tree so that I can efficiently search for keys within a range. | Won't (E1) | 13 | Using key-value for now |
+| US-12 | As a user, I want to execute SQL-like queries so that I can interact with the database using a query language. | Won't (E1) | 13 | Not currently in scope |
 
 ## 3. Acceptance Criteria
 
