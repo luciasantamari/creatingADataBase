@@ -1,164 +1,161 @@
-## Backlog en historias de usuario
+# Product Backlog — Lightweight Key-Value Database
 
-### HU01 — Estructura general de la base de datos
+## 1. Project Overview
 
-**Como** desarrollador, **quiero** disponer de una estructura base común para la base de datos, **para** poder especializarla posteriormente según las necesidades de cada departamento.
+The goal of this project is to develop a lightweight, persistent key-value database using Python.
 
-**Criterios de aceptación:**
-- Existe una estructura base funcional.
-- Se puede crear la configuración de un nuevo departamento sin modificar el funcionamiento de los demás.
-- Dos departamentos pueden tener configuraciones diferentes.
-- Los datos de un departamento no interfieren con los de otro.
+The database should be simple to use, efficient for basic operations, and capable of storing data without loading all records into memory.
 
-**INVEST:** es independiente, aporta valor al facilitar la ampliación del sistema, puede estimarse, puede implementarse en una iteración y los criterios anteriores permiten probarla.
+The initial version will use an append-only log file and an in-memory hash index. More advanced features may be implemented in later development phases.
 
----
+### Main Objectives
 
-### HU02 — Migración de Excel
+- Provide fast key-value storage and retrieval.
+- Preserve data between application restarts.
+- Minimize memory usage.
+- Keep the architecture simple and modular.
+- Ensure reliability through automated testing.
 
-**Como** usuario, **quiero** importar los datos estructurados existentes en ficheros Excel a la base de datos, **para** poder consultar la información sin depender de los ficheros originales.
+## 2. Product Backlog
 
-**Criterios de aceptación:**
-- El sistema puede leer el formato Excel utilizado actualmente.
-- Cada registro válido del Excel se convierte en una entrada de la base de datos.
-- Al terminar la importación, el número de registros importados coincide con el número de registros válidos del fichero.
-- Los valores importados coinciden con los valores originales.
-- Si existe una fila que no puede importarse, el sistema la identifica.
+User stories follow the INVEST principles and are prioritized using the MoSCoW method.
 
----
+Story points are preliminary estimates that should be validated by the development team.
 
-### HU03 — Almacenamiento clave-valor
+| ID | User Story | Priority | Story Points |
+|---|---|---|---:|
+| US-01 | As a user, I want to store a key-value pair so that I can save information for later use. | Must | 3 |
+| US-02 | As a user, I want to retrieve a value using its key so that I can access stored information quickly. | Must | 3 |
+| US-03 | As a user, I want to delete a key-value pair so that I can remove information I no longer need. | Must | 3 |
+| US-04 | As a user, I want my data to remain available after restarting the application so that I do not lose previously stored records. | Must | 5 |
+| US-05 | As a developer, I want automated unit tests so that I can verify the database operations behave correctly. | Must | 3 |
+| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 |
+| US-07 | As a user, I want to update an existing key so that I can modify information without creating duplicate active entries. | Should | 2 |
+| US-08 | As a user, I want invalid inputs to be handled predictably so that incorrect operations do not corrupt the database. | Should | 3 |
+| US-09 | As a user, I want the database to recover from an incomplete final record so that an interrupted write does not prevent startup. | Should | 5 |
+| US-10 | As a user, I want obsolete records to be compacted so that the database does not waste unnecessary disk space. | Could | 8 |
+| US-11 | As a user, I want an ordered index using a B+ tree so that I can efficiently search for keys within a range. | Won't (E1) | 13 |
+| US-12 | As a user, I want to execute SQL-like queries so that I can interact with the database using a query language. | Won't (E1) | 13 |
 
-**Como** desarrollador, **quiero** almacenar la información mediante pares clave-valor, **para** simplificar el acceso e indexar los datos de forma eficiente.
+## 3. Acceptance Criteria
 
-Por ejemplo:
+### US-01 — Store Data
+- The database accepts a valid key-value pair.
+- The record is appended to the storage file.
+- The hash index stores the record's file offset.
+- The stored value can be retrieved immediately.
 
-```text
-numero_pedido -> datos_pedido
-```
+### US-02 — Retrieve Data
+- Existing keys return their corresponding values.
+- Missing keys return `None`.
+- Retrieval uses the hash index rather than scanning the entire file.
 
-**Criterios de aceptación:**
-- Cada registro tiene una clave.
-- Dada una clave existente, el sistema devuelve su valor correspondiente.
-- Una búsqueda de una clave inexistente devuelve un resultado indicando que no existe.
-- No pueden existir dos entradas diferentes con la misma clave dentro del mismo espacio de datos.
+### US-03 — Delete Data
+- Existing keys can be deleted.
+- A deletion marker is appended to the storage file.
+- Deleted keys are removed from the active index.
+- Retrieving a deleted key returns `None`.
 
----
+### US-04 — Data Persistence
+- Records remain available after restarting the application.
+- The hash index is reconstructed from the storage file during startup.
+- Deleted records remain logically deleted after restarting.
+- The latest value of each key is recovered.
 
-### HU04 — Operaciones CRUD
+### US-05 — Unit Testing
+- Tests cover insertion, retrieval, deletion, and persistence.
+- Tests cover missing keys and repeated operations.
+- Tests run successfully using `pytest`.
 
-**Como** usuario autorizado, **quiero** crear, consultar, modificar y eliminar registros, **para** gestionar la información almacenada.
+### US-06 — Continuous Integration
+- GitHub Actions executes the test suite automatically.
+- Tests run on pull requests targeting `main`.
+- Failed tests are reported by the workflow.
+- The workflow succeeds when all tests pass.
 
-**Criterios de aceptación:**
-- Se puede crear un registro nuevo.
-- Se puede consultar mediante su clave.
-- Se puede modificar el valor asociado a una clave.
-- Se puede eliminar un registro.
-- Después de eliminarlo, una búsqueda de esa clave indica que no existe.
+### US-07 — Update Existing Records
+- Storing an existing key updates its current value.
+- Retrieval returns the latest value.
+- The index references the latest record.
+- The updated value survives an application restart.
 
----
+### US-08 — Input Validation
+- Unsupported key types are rejected with a clear error.
+- Values that cannot be serialized are rejected.
+- A rejected operation does not modify the database.
 
-### HU05 — Persistencia
+### US-09 — Incomplete Write Recovery
+- Startup detects an incomplete final record.
+- Previously completed records remain accessible.
+- Recovery does not silently ignore corruption in earlier records.
 
-**Como** usuario, **quiero** que los cambios realizados permanezcan guardados, **para** no perder información cuando el programa se cierre.
+### US-10 — Storage Compaction
+- Compaction removes obsolete and deleted records.
+- The latest value of each active key is preserved.
+- The index remains valid after compaction.
+- The compacted file is not larger than the original file.
 
-**Criterios de aceptación:**
-- Se introduce un registro y se cierra el programa.
-- Al volver a iniciar el programa, el registro continúa disponible.
-- Las modificaciones realizadas antes del cierre se conservan.
-- Los registros eliminados no reaparecen después de reiniciar.
+### US-11 — B+ Tree Index
+- Keys are maintained in sorted order.
+- Searching for existing keys returns the correct records.
+- Range queries return matching records in order.
+- Node splitting preserves the tree's structural invariants.
 
----
+### US-12 — SQL-like Query Interface
+- The database accepts a documented subset of SQL-like commands.
+- Supported commands produce the same results as the underlying database operations.
+- Invalid commands produce understandable errors.
 
-### HU06 — Separación por departamentos
+## 4. Priority Summary
 
-**Como** usuario de un departamento, **quiero** acceder únicamente a los datos correspondientes a mi departamento, **para** evitar acceder a información que no me corresponde.
+| Priority | Stories | Story Points |
+|---|---|---:|
+| Must Have | US-01 to US-06 | 19 |
+| Should Have | US-07 to US-09 | 10 |
+| Could Have | US-10 | 8 |
+| Won't Have (E1) | US-11 to US-12 | 26 |
+| **Total** | **12 stories** | **63** |
 
-**Criterios de aceptación:**
-- Cada registro está asociado a un departamento o espacio de datos.
-- Un usuario autorizado para el departamento A puede acceder a sus registros.
-- Ese mismo usuario no puede consultar registros exclusivos del departamento B.
-- Añadir un nuevo departamento no modifica los datos existentes de los demás.
+Must-have stories represent approximately **30% of the estimated total effort**, remaining below the 60% threshold discussed in class.
 
----
+The Won't Have category refers to the first delivery, not necessarily to the entire project.
 
-### HU07 — Sistema de permisos
+## 5. Definition of Done
 
-**Como** administrador, **quiero** asignar permisos a los usuarios, **para** controlar qué operaciones puede realizar cada uno.
+A user story is considered complete when:
 
-**Criterios de aceptación:**
-- Se pueden definir usuarios con diferentes permisos.
-- Un usuario sin permiso de escritura no puede crear ni modificar registros.
-- Un usuario sin permiso de borrado no puede eliminar registros.
-- Un usuario autorizado puede realizar las operaciones correspondientes.
-- Los desarrolladores/administradores pueden disponer de permisos distintos de los usuarios normales.
+1. Its acceptance criteria have been satisfied.
+2. The implementation includes appropriate unit tests.
+3. All automated tests pass locally and in GitHub Actions.
+4. The code has been reviewed and approved by another team member.
+5. The changes have been merged into `main` through a pull request.
+6. Any necessary documentation has been updated.
 
----
+## 6. Initial Delivery — E1
 
-### HU08 — Soporte de texto y símbolos
+**Deadline: November 3, 2026**
 
-**Como** usuario, **quiero** almacenar texto con los caracteres que utilizo habitualmente, **para** conservar los datos sin alteraciones.
+The first delivery focuses on the minimum functional database.
 
-**Criterios de aceptación:**
-- El sistema almacena correctamente letras con tildes y `ñ`.
-- Admite mayúsculas y minúsculas.
-- Admite números.
-- Admite espacios.
-- Admite símbolos como `@`, `#`, `%`, `&`, `/`, `-`, `_`, `€`, etc.
-- El texto recuperado es exactamente igual al introducido.
+Required deliverables:
 
-Esto convierte el requisito original **"aceptar todo tipo de símbolos"**, que no era realmente verificable, en algo que sí podemos comprobar.
+- Validated and prioritized product backlog.
+- Documented story point estimates.
+- Functional append-only storage with `set`, `get`, and `delete`.
+- Automatic hash index reconstruction on startup.
+- Unit tests using `pytest`.
+- Working GitHub Actions continuous integration workflow.
 
----
+Advanced indexing, compaction, and query language support are deferred until later phases.
 
-### HU09 — Consultas rápidas
+## 7. Technical Constraints
 
-Aquí hay que corregir otro requisito que teníamos: **"respuestas instantáneas"** no es verificable porque *instantáneo* no tiene una medida concreta.
+- **Programming language:** Python 3.
+- **Storage:** Local append-only file.
+- **Indexing:** In-memory hash index.
+- **Testing:** pytest.
+- **Version control:** Git and GitHub.
+- **Continuous integration:** GitHub Actions.
+- **External dependencies:** Minimized wherever possible.
 
-Podemos escribirlo como:
-
-**Como** usuario, **quiero** que las consultas por clave se realicen rápidamente, **para** acceder a la información sin esperas apreciables.
-
-**Criterios de aceptación:**
-- Con una base de datos de al menos 500 clientes/registros de prueba, una consulta individual por clave debe completarse en menos de **100 ms** en el entorno de pruebas acordado.
-- El test se realizará sobre registros existentes y no existentes.
-- El tiempo puede medirse mediante un test automatizado.
-
-El límite de `100 ms` se puede negociar con el profesor/equipo; lo importante para INVEST es que exista **una cifra comprobable**.
-
----
-
-### HU10 — Simplicidad de despliegue
-
-El requisito **"algo más simple que Redis"** tampoco es directamente verificable. Yo lo transformaría en:
-
-**Como** desarrollador, **quiero** que la base de datos funcione sin necesitar un servidor de base de datos independiente, **para** reducir la configuración y mantenimiento del sistema.
-
-**Criterios de aceptación:**
-- La aplicación puede iniciarse sin ejecutar manualmente un servidor de base de datos.
-- La base de datos se crea o abre desde la propia aplicación.
-- Un entorno nuevo puede ejecutar el sistema instalando únicamente las dependencias documentadas del proyecto.
-
-Esto captura lo que realmente queríais conseguir al decir *más simple que Redis*.
-
----
-
-### HU11 — Bajo consumo de memoria
-
-**Como** desarrollador, **quiero** que los datos persistentes no tengan que mantenerse completamente en memoria, **para** evitar los problemas de memoria del sistema anterior.
-
-**Criterios de aceptación:**
-- Los datos permanecen almacenados en disco.
-- Reiniciar el proceso no elimina los datos.
-- El funcionamiento normal no requiere cargar explícitamente toda la base de datos en un único `dict` de Python.
-
----
-
-### HU12 — Consistencia de los datos
-
-**Como** usuario, **quiero** que una operación completada correctamente deje los datos en un estado consistente, **para** evitar consultar información obsoleta o parcialmente modificada.
-
-**Criterios de aceptación:**
-- Después de una escritura completada correctamente, una lectura posterior devuelve el nuevo valor.
-- Después de una eliminación completada correctamente, el registro deja de estar disponible.
-- Una operación que devuelve un error no debe notificarse al usuario como completada correctamente.
+The database is intended primarily as an educational project. Simplicity, correctness, maintainability, and measured performance take priority over unnecessary features.
