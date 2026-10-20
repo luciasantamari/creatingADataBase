@@ -1,18 +1,13 @@
 import json
-import lmdb
+import os
 
 
 class AlphabeticalDirectory:
-    def __init__(self, filename="data"):
+    def __init__(self, filename="data.txt"):
         self.filename = filename
         self.size = 26
         self.table = [[] for _ in range(self.size)]
-        
-        self.db = lmdb.open(filename)
-        
-        loaded_data = self.load(self.db, "directory")
-        if loaded_data is not None:
-            self.table = loaded_data
+        self._load_from_file()
 
     def close(self):
         self.db.close()
@@ -21,21 +16,14 @@ class AlphabeticalDirectory:
         """Maps the first letter to index 0-25."""
         return ord(word[0].lower()) - 97
 
-    def save(self, db, key, dictionary):
-        with db.begin(write=True) as transaction:
-            transaction.put(
-                key.encode("utf-8"), 
-                json.dumps(dictionary).encode("utf-8")
-            )
+    def _save_to_file(self):
+        with open(self.filename, "w") as f:
+            json.dump(self.table, f)
 
-    def load(self, db, key):
-        with db.begin() as transaction:
-            data = transaction.get(key.encode("utf-8"))
-            
-        if data is None:
-            return None
-        
-        return json.loads(data.decode("utf-8"))
+    def _load_from_file(self):
+        if os.path.exists(self.filename):
+            with open(self.filename, "r") as f:
+                self.table = json.load(f)
 
     def insert(self, word):
         index = self._hash_letter(word)
@@ -44,7 +32,7 @@ class AlphabeticalDirectory:
             return self.table[index].index(word)
 
         self.table[index].append(word)
-        self.save(self.db, "directory", self.table)
+        self._save_to_file()
 
         return len(self.table[index]) - 1
 
@@ -57,7 +45,7 @@ class AlphabeticalDirectory:
         index = self._hash_letter(word)
         if word in self.table[index]:
             self.table[index].remove(word)
-            self.save(self.db, "directory", self.table)
+            self._save_to_file()
 
 if __name__ == "__main__":
     directory = AlphabeticalDirectory("data")
