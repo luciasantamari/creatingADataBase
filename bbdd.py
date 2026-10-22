@@ -1,64 +1,36 @@
-import json
+from storage import Storage
+from hash_index import HashIndex
 import os
 
 
 class AlphabeticalDirectory:
-    def __init__(self, filename="data.txt"):
-        self.filename = filename
-        self.size = 26
-        self.table = [[] for _ in range(self.size)]
-        self._load_from_file()
+    def __init__(self, filename="data.db"):
+        self.storage = Storage(filename)
+        self.index = HashIndex()
+        self._rebuild_index()
 
     def close(self):
-    pass
+        #code...
+        pass
         
-    def _hash_letter(self, word):
-        """Maps the first letter to index 0-25."""
-        return ord(word[0].lower()) - 97
-
-    def _save_to_file(self):
-        with open(self.filename, "w") as f:
-            json.dump(self.table, f)
-
-    def _load_from_file(self):
-        if os.path.exists(self.filename):
-            with open(self.filename, "r") as f:
-                self.table = json.load(f)
-
     def insert(self, word):
-        index = self._hash_letter(word)
-
-        if word in self.table[index]:
-            return self.table[index].index(word)
-
-        self.table[index].append(word)
-        self._save_to_file()
-
-        return len(self.table[index]) - 1
+        #code...
+       pass
 
     def search(self, word):
-        index = self._hash_letter(word)
-        bucket = self.table[index]
-        return bucket.index(word) if word in bucket else -1
+        #code...
+        pass
+       
 
     def delete(self, word):
-        index = self._hash_letter(word)
-        if word in self.table[index]:
-            self.table[index].remove(word)
-            self._save_to_file()
+        #code...
+        pass
+            
+    def _rebuild_index(self):
+        #code...
+        pass
+       
+    
+       
 
-if __name__ == "__main__":
-    directory = AlphabeticalDirectory("data")
-    directory.insert("boat")
-    directory.insert("from")
-    directory.insert("sail")
-    
-    result = directory.search("sail")
-    if result != -1:
-        print(f"Word found at bucket position: {result}")
-    else:
-        print("Word not found.")
-    
-    directory.delete("sail")
-    print("Word deleted.")
-    directory.close()
+#if __name__ == "__main__":
