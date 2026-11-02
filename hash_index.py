@@ -50,3 +50,16 @@ class HashIndex:
     def clear(self):
         """Vacía el índice entero."""
         self._index.clear()
+
+    def rebuild(self, records):
+        """Reconstruye el índice a partir de los registros de storage.records().
+
+        Cada registro es una tupla (offset, word, deleted), en orden de fichero.
+        Si deleted es False se añade la palabra; si es True se elimina.
+        """
+        self.clear()
+        for offset, word, deleted in records:
+            if deleted:
+                self.remove(word)
+            else:
+                self.add(word, offset)    
