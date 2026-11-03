@@ -193,12 +193,12 @@ Repeat with a larger N to show that the indexed count stays at 0 while the seque
 - The file is opened in binary mode (`"ab"` to append, `"rb"` to read), so offsets are byte positions and `seek()` can locate records reliably.
 - **Startup replay:** `bbdd.py` calls `index.clear()`, then walks `storage.records()` in order. Each insert record calls `index.add(word, offset)` and each deletion marker calls `index.remove(word)`. With `use_index=False` there is no replay; each operation scans the file itself.
 - Records store the word as inserted, converted to NFC (case and accents preserved). Lowercasing and accent removal exist only inside the index.
-- **Malformed records** raise an explicit error for now. Recovering from an interrupted final write is a separate backlog item (US-09), because it needs careful handling so that a later append cannot make corruption worse.
+- **Malformed records** raise a `ValueError` whose message contains the byte offset, in both `records()` and `read()`. A record is malformed if it does not end in `\n`, is not valid UTF-8 or JSON, is not a JSON object, lacks `word` or `deleted`, has an empty or non-string `word`, or has a non-boolean `deleted`. Recovering from an interrupted final write is a separate backlog item (US-09), because it needs careful handling so that a later append cannot make corruption worse.
 
 **Validation policy (applies to the whole database):**
 
 - Stored strings are case-sensitive (`"Boat"` and `"boat"` are different strings). Search ignores case and accents unless `case_sensitive=True` / `-c` is used.
-- Empty strings are rejected with `ValueError`, and non-strings with `TypeError`. Invalid operations write nothing.
+- Empty strings are rejected with `ValueError`, and non-strings with `TypeError`. `Storage.append()` also rejects a non-boolean `deleted` with `TypeError`. Invalid operations write nothing.
 - Any UTF-8 text is accepted (for example `"canción"` or `"Ñandú"`) and stored in NFC form.
 
 ## 3. Responsibilities
@@ -216,6 +216,8 @@ Implements the `Storage` class and the JSON Lines format proposed in §2 (steps 
 3. Implement `records()` as a generator yielding `(offset, word, deleted)`, and keep the `records_read` counter up to date in `read()` and `records()`.
 4. Add validation for invalid strings, define behavior for a missing file (treat as empty), and raise an explicit error for malformed records.
 5. Test Unicode strings, deletion markers, offsets, and persistence after reopening the file.
+
+**Status (3 November 2026):** tasks 1–4 are implemented in `storage.py` (branch `storage`), with one `_parse_line()` shared by `read()` and `records()` for validating records. Checked by hand: offsets `0 35 70 109` for `boat`, `sail`, `canción`, `x`; Unicode round trip; deletion markers; reopening the file; a missing file yields nothing; and 11 corrupt-record cases plus `read()` past the end all raise `ValueError` with the offset. Task 5 (pytest tests, assigned to Miguelchi in `test_storage.py`) is still pending, so nothing is DONE yet: the pull request, review and merge are still missing.
 
 **Acceptance criteria**
 
@@ -306,7 +308,7 @@ creatingADataBase/
 ├── TASKS.md                       # EXISTS — this file
 ├── bbdd.py                        # EXISTS — Hugo integrates modules
 ├── tests.py                       # EXISTS — Miguelchi rewrites and expands tests
-├── storage.py                     # NEW — Miguel
+├── storage.py                     # Miguel — written, pending tests/review/merge
 ├── hash_index.py                  # NEW — Lucía
 ├── benchmarks/                    # EXISTS — Hugo (fix label)
 │   └── compare.py
