@@ -6,7 +6,7 @@ The goal of this project is to develop a lightweight, persistent database for **
 
 The database should be simple to use, efficient for basic operations, and eventually capable of accessing stored data without loading every record into memory.
 
-The **first iteration** provides an alphabetical directory with string insertion, searching, deletion, and JSON-based persistence. A **planned second iteration** will introduce an append-only log file and an in-memory hash index with file offsets. More advanced features may be implemented in later phases.
+The **first iteration** provides an alphabetical directory with string insertion, searching, deletion, and JSON-based persistence. A **second iteration, in progress,** introduces an append-only log file and an in-memory hash index with file offsets. Both modules are merged, but `bbdd.py` does not use them yet. More advanced features may be implemented in later phases.
 
 ### Main Objectives
 
@@ -33,16 +33,16 @@ Story points are preliminary estimates and should be validated by the developmen
 | **BLOCKED** | Cannot proceed until another task or decision is completed. |
 | **OUT OF SCOPE (E1)** | Intentionally excluded from the initial delivery; not necessarily excluded from the project. |
 
-> **Important:** A method existing in the code does not make a story DONE. Status is based on its complete acceptance criteria. The six existing tests pass locally and in GitHub Actions, but they test the Iteration 1 alphabetical implementation. A passing CI run does not mean the append-only storage engine has been implemented or tested. `storage.py` has been written (branch `storage`) and checked by hand against valid and corrupt records, but it is not merged, has no pytest tests yet, and `bbdd.py` does not use it yet, so the stories below keep their status.
+> **Important:** A method existing in the code does not make a story DONE. Status is based on its complete acceptance criteria. The six existing tests pass locally and in GitHub Actions, but they test the Iteration 1 alphabetical implementation. A passing CI run does not mean the append-only storage engine has been implemented or tested. `storage.py` (PR #11) and `hash_index.py` (PR #10) are merged into `main`, but `bbdd.py` does not use them yet, so the stories below keep their status. `storage.py` was checked by hand against valid and corrupt records and has no pytest tests yet. `hash_index.py` has seven tests in `test_hash_index.py`, which pass locally but are not run by CI yet. Neither pull request has a recorded review on GitHub.
 
 | ID | User Story | Priority | Story Points | Development Status | Current State |
 |---|---|---|---:|---|---|
-| US-01 | As a user, I want to store a string so that I can access it later. | Must | 3 | **PARTIAL** | `insert(word)` works with the in-memory alphabetical buckets, but writes the entire JSON file rather than appending a record. `Storage.append()` in `storage.py` (pending review) already appends a record and returns its byte offset, but `bbdd.py` does not call it yet. |
-| US-02 | As a user, I want to find a stored string so that I can check whether it exists. | Must | 3 | **PARTIAL** | `search(word)` checks the relevant alphabetical bucket, not a disk-offset hash index. |
-| US-03 | As a user, I want to delete a stored string so that it is no longer available. | Must | 3 | **PARTIAL** | `delete(word)` removes a string and rewrites JSON; there are no deletion markers in `bbdd.py` yet. `Storage.append(word, deleted=True)` (pending review) can write a deletion marker. |
-| US-04 | As a user, I want my strings to remain available after restarting the application so that they are not lost. | Must | 5 | **PARTIAL** | JSON persistence exists, but index reconstruction is not implemented. `Storage.records()` (pending review) can replay the log, but nothing uses it yet. |
-| US-05 | As a developer, I want automated unit tests so that I can verify database operations. | Must | 3 | **IN PROGRESS** | `tests.py` imports `AlphabeticalDirectory` from `bbdd.py` and all six tests pass (insertion, search, deletion, collisions, duplicates, persistence). They still assert the old bucket positions and read `directory.table`, so they must be rewritten against the public interface for Iteration 2. |
-| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 | **DONE** | `.github/workflows/tests.yml` runs `pytest` on every push and pull request. The latest run, on commit `3348f4f`, passed. |
+| US-01 | As a user, I want to store a string so that I can access it later. | Must | 3 | **PARTIAL** | `insert(word)` works with the in-memory alphabetical buckets, but writes the entire JSON file rather than appending a record. `Storage.append()` in `storage.py` already appends a record and returns its byte offset, but `bbdd.py` does not call it yet. |
+| US-02 | As a user, I want to find a stored string so that I can check whether it exists. | Must | 3 | **PARTIAL** | `search(word)` checks the relevant alphabetical bucket, not a disk-offset hash index. `HashIndex` in `hash_index.py` implements that lookup, but `bbdd.py` does not call it yet. |
+| US-03 | As a user, I want to delete a stored string so that it is no longer available. | Must | 3 | **PARTIAL** | `delete(word)` removes a string and rewrites JSON; there are no deletion markers in `bbdd.py` yet. `Storage.append(word, deleted=True)` can write a deletion marker, but `bbdd.py` does not call it yet. |
+| US-04 | As a user, I want my strings to remain available after restarting the application so that they are not lost. | Must | 5 | **PARTIAL** | JSON persistence exists, but `bbdd.py` does not reconstruct an index at startup. `Storage.records()` can replay the log and `HashIndex.rebuild()` can consume it, but `bbdd.py` does not call them yet. |
+| US-05 | As a developer, I want automated unit tests so that I can verify database operations. | Must | 3 | **IN PROGRESS** | `tests.py` imports `AlphabeticalDirectory` from `bbdd.py` and all six tests pass (insertion, search, deletion, collisions, duplicates, persistence). They still assert the old bucket positions and read `directory.table`, so they must be rewritten against the public interface for Iteration 2. `test_hash_index.py` adds seven index tests that pass locally. `storage.py` has no pytest tests yet. |
+| US-06 | As a developer, I want tests to run automatically on GitHub so that errors are detected before changes are merged. | Must | 2 | **PARTIAL** | `.github/workflows/tests.yml` runs `pytest` on every push and pull request, and the run on commit `7e7e2e3` passed. It only runs `tests.py` (6 of the 13 tests), so `test_hash_index.py` must be added to it. |
 | US-07 | As a user, I want duplicate insertions to have a predictable result so that no duplicate active strings are created. | Should | 2 | **PARTIAL** | The current implementation avoids duplicates in memory; this must be retained and tested with the new storage engine. |
 | US-08 | As a user, I want invalid inputs to be handled predictably so that incorrect operations do not corrupt the database. | Should | 3 | **PARTIAL** | Agreed policy (see `TASKS.md` §2): inserts are case-sensitive, accept UTF-8 and are stored in NFC form; search ignores case and accents (but not `ñ`) unless `-c` is given; empty strings and non-strings are rejected. Only the storage layer applies it so far: `Storage.append()` rejects non-string words (`TypeError`), empty words (`ValueError`) and non-boolean `deleted` (`TypeError`), and reading a corrupt record raises `ValueError` with its byte offset. NFC normalization, the case/accent-insensitive search and validation in `bbdd.py` are not implemented. |
 | US-09 | As a user, I want the database to recover from an incomplete final record so that an interrupted write does not prevent startup. | Should | 5 | **PLANNED** | Incomplete-write recovery is not implemented. |
@@ -160,11 +160,11 @@ The Won't Have category refers to the first delivery, not necessarily the entire
 - Empty strings and strings not starting with a letter are not validated (the bucket index can be out of range).
 - `benchmarks/compare.py` labels the current `AlphabeticalDirectory` as "Append-only", but it still rewrites JSON. The label must be fixed, or the comparison deferred until the new engine exists.
 
-### Iteration 2 — Storage and Indexing Improvements (Planned)
+### Iteration 2 — Storage and Indexing Improvements (In Progress)
 
-- Implement an append-only storage layer (`storage.py`) with byte offsets, using one JSON record per line in a new `data.log` file. *(Written, with validation of corrupt records; pending tests, review and merge.)*
-- Replace the 26-bucket structure with an in-memory dictionary mapping strings to offsets (`hash_index.py`).
-- Rebuild the index by replaying the storage log when opening the database.
+- Implement an append-only storage layer (`storage.py`) with byte offsets, using one JSON record per line in a new `data.log` file. *(Merged in PR #11, with validation of corrupt records; NFC conversion and pytest tests are pending.)*
+- Replace the 26-bucket structure with an in-memory dictionary mapping strings to offsets (`hash_index.py`). *(Module and its tests merged in PR #10; `bbdd.py` still uses the buckets.)*
+- Rebuild the index by replaying the storage log when opening the database. *(`HashIndex.rebuild()` exists; `bbdd.py` does not call it yet.)*
 - Preserve the simple string-only public API. `insert()` will return the record's byte offset instead of a bucket position, `search()` a list of offsets (`[]` when nothing matches, instead of `-1`), and `delete()` `True`/`False`. `delete()` matches the exact string only.
 - Make search case- and accent-insensitive by default (keeping `ñ` distinct), with a `-c` flag for exact search.
 - Add a command-line interface with `argparse`.
@@ -209,10 +209,10 @@ Advanced indexing, compaction, and query-language support are deferred until lat
 - **Current storage:** JSON file rewritten on changes.
 - **Planned storage:** Local append-only file (`data.log`, JSON Lines, opened in binary mode so offsets are byte positions). The `Storage` class exists in `storage.py`; integration into `bbdd.py` is pending.
 - **Current indexing:** 26 alphabetical buckets in memory.
-- **Planned indexing:** In-memory dictionary mapping strings to byte offsets.
+- **Planned indexing:** In-memory dictionary mapping strings to byte offsets. The `HashIndex` class exists in `hash_index.py`; integration into `bbdd.py` is pending.
 - **Testing:** pytest.
 - **Version control:** Git and GitHub.
-- **Continuous integration:** GitHub Actions (implemented; Python 3.12, runs on every push and pull request).
+- **Continuous integration:** GitHub Actions (implemented; Python 3.12, runs `tests.py` on every push and pull request).
 - **External dependencies:** Minimized wherever possible.
 
 This is an educational project. Simplicity, correctness, maintainability, and measured performance take priority over unnecessary features.

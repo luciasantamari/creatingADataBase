@@ -19,12 +19,15 @@ creatingADataBase/
 ├── README.md           # Product backlog
 ├── TASKS.md            # This file
 ├── bbdd.py             # AlphabeticalDirectory implementation
+├── hash_index.py       # HashIndex and normalize(), not used by bbdd.py yet
+├── storage.py          # Append-only Storage, not used by bbdd.py yet
+├── test_hash_index.py  # Index tests (7 passing locally, not run by CI yet)
 └── tests.py            # Existing pytest tests (6 passing)
 ```
 
-The existing implementation stores **strings only**, with `insert(word)`, `search(word)`, and `delete(word)`. It keeps 26 buckets in memory and rewrites a JSON file when data changes. `storage.py` and `hash_index.py` do not exist yet.
+The public implementation in `bbdd.py` stores **strings only**, with `insert(word)`, `search(word)`, and `delete(word)`. It keeps 26 buckets in memory and rewrites a JSON file when data changes. `storage.py` and `hash_index.py` are merged into `main`, but `bbdd.py` does not use them yet.
 
-**This allocation describes work to do, not files that already exist.** The goal is to improve the existing code without adding features unrelated to this iteration.
+The goal is to improve the existing code without adding features unrelated to this iteration.
 
 ## 2. Immediate Fixes (Before Parallel Development)
 
@@ -217,7 +220,7 @@ Implements the `Storage` class and the JSON Lines format proposed in §2 (steps 
 4. Add validation for invalid strings, define behavior for a missing file (treat as empty), and raise an explicit error for malformed records.
 5. Test Unicode strings, deletion markers, offsets, and persistence after reopening the file.
 
-**Status (3 November 2026):** tasks 1–4 are implemented in `storage.py` (branch `storage`), with one `_parse_line()` shared by `read()` and `records()` for validating records. Checked by hand: offsets `0 35 70 109` for `boat`, `sail`, `canción`, `x`; Unicode round trip; deletion markers; reopening the file; a missing file yields nothing; and 11 corrupt-record cases plus `read()` past the end all raise `ValueError` with the offset. Task 5 (pytest tests, assigned to Miguelchi in `test_storage.py`) is still pending, so nothing is DONE yet: the pull request, review and merge are still missing.
+**Status (3 November 2026):** tasks 1–4 are implemented in `storage.py` and merged in PR #11, with one `_parse_line()` shared by `read()` and `records()` for validating records. Checked by hand: offsets `0 35 70 109` for `boat`, `sail`, `canción`, `x`; Unicode round trip; deletion markers; reopening the file; a missing file yields nothing; and 11 corrupt-record cases plus `read()` past the end all raise `ValueError` with the offset. Still pending: task 5 (pytest tests, assigned to Miguelchi in `test_storage.py`), NFC conversion when appending (§2), and a review, because PR #11 has none recorded on GitHub. So nothing is DONE yet.
 
 **Acceptance criteria**
 
@@ -239,6 +242,8 @@ Implements the `Storage` class and the JSON Lines format proposed in §2 (steps 
 3. Handle duplicate inserts without creating duplicate active entries.
 4. Provide a way to rebuild the index by processing records supplied by Miguel's storage iterator.
 5. Write a few focused index tests and explain the expected average-case search cost.
+
+**Status (3 November 2026):** tasks 1–4 are implemented in `hash_index.py` and merged in PR #10, with `rebuild(records)` for task 4. The seven tests in `test_hash_index.py` pass locally but are not run by CI yet. Still pending: the search-cost explanation from task 5, and a review, because PR #10 has none recorded on GitHub. `bbdd.py` does not use the index yet, so nothing is DONE.
 
 **Acceptance criteria**
 
@@ -285,7 +290,7 @@ Implements the `Storage` class and the JSON Lines format proposed in §2 (steps 
 3. Coordinate the record format and method signatures before module implementation.
 4. Implement the `use_index` switch: with the index off, `insert`, `search` and `delete` scan `storage.records()` sequentially.
 5. Add a command-line interface with `argparse`: `-c` for exact search and `--no-cache` to disable the index. When a search returns several offsets, print each matching word using `storage.read(offset)`.
-6. ~~Add a GitHub Actions workflow that runs `pytest` on pushes and pull requests.~~ Done: `.github/workflows/tests.yml`, latest run on `3348f4f` passed.
+6. ~~Add a GitHub Actions workflow that runs `pytest` on pushes and pull requests.~~ Done: `.github/workflows/tests.yml`, the run on `7e7e2e3` passed. It only runs `tests.py`, so `test_hash_index.py` must be added now and `test_storage.py` when it exists. Plain `python -m pytest` would skip `tests.py`, because that name does not match `test_*.py`.
 7. Add a reproducible comparison of insertion and search speed between the original JSON implementation and the new append-only version. `benchmarks/compare.py` exists, but it labels the current `AlphabeticalDirectory` as "Append-only" although it still rewrites JSON. Fix the label or defer the comparison until the new engine exists.
 8. Update `README.md` to reflect what is implemented and what remains planned.
 
@@ -308,8 +313,10 @@ creatingADataBase/
 ├── TASKS.md                       # EXISTS — this file
 ├── bbdd.py                        # EXISTS — Hugo integrates modules
 ├── tests.py                       # EXISTS — Miguelchi rewrites and expands tests
-├── storage.py                     # Miguel — written, pending tests/review/merge
-├── hash_index.py                  # NEW — Lucía
+├── storage.py                     # EXISTS — Miguel (NFC and tests pending)
+├── hash_index.py                  # EXISTS — Lucía
+├── test_hash_index.py             # EXISTS — Lucía
+├── test_storage.py                # NEW — Miguelchi
 ├── benchmarks/                    # EXISTS — Hugo (fix label)
 │   └── compare.py
 └── .github/                       # EXISTS — Hugo (CI done)
@@ -332,8 +339,8 @@ creatingADataBase/
 
 1. ~~**Stabilize current version:** fix imports and `close()`; run tests.~~ Done.
 2. **Agree on contracts:** define record encoding, offsets, return values, and invalid-input behavior. *(Agreed: see §2.)*
-3. **Build in parallel:** Miguel works on `storage.py`, Lucía on `hash_index.py`, Miguelchi on tests; Hugo prepares integration and CI.
-4. **Integrate:** Hugo joins the modules into `bbdd.py`, with support from the other three.
+3. **Build in parallel:** Miguel works on `storage.py`, Lucía on `hash_index.py`, Miguelchi on tests; Hugo prepares integration and CI. *(`storage.py` and `hash_index.py` merged; storage tests and the rewrite of `tests.py` pending.)*
+4. **Integrate:** Hugo joins the modules into `bbdd.py`, with support from the other three. *(Pending: `bbdd.py` on `main` still uses the 26 buckets.)*
 5. **Verify:** run tests, review pull requests, benchmark, and update the backlog status.
 
 ## 7. Out of Scope for This Iteration
@@ -347,3 +354,5 @@ creatingADataBase/
 ## 8. Definition of Done
 
 A task is complete when its code is merged, its agreed acceptance criteria pass, its tests run locally and in CI, and another team member has reviewed the change.
+
+PRs #10 and #11 are merged, but that alone does not complete their tasks: neither has a review recorded on GitHub, and their tests do not all run in CI yet.
