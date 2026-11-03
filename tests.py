@@ -1,63 +1,121 @@
 import pytest
 from bbdd import AlphabeticalDirectory
 
-
 @pytest.fixture 
 def directory(tmp_path):
-    d= AlphabeticalDirectory(str(tmp_path/"test_db"))
-    yield d
-    d.close()
-   
-                             
-def test_insert(directory):
-    directory.insert("boat")
+  
+    db_path = str(tmp_path / "test_data.log")
+    db = AlphabeticalDirectory(db_path)
+    yield db
+    db.close()
 
-    assert directory.search("boat") == 0
+
+def test_insert_and_search_found(directory):
+    offset = directory.insert("boat")
+    
+   
+    assert directory.search("boat") == [offset]
 
 
 def test_search_not_found(directory):
-    assert directory.search("sail") == -1
+   
+    assert directory.search("sail") == []
 
 
 def test_delete(directory):
-    directory.insert("sail")
-    assert directory.search("sail") == 0
+    offset = directory.insert("sail")
+    assert directory.search("sail") == [offset]
 
-    directory.delete("sail")
-
-    assert directory.search("sail") == -1
-
-
-def test_multiple_words_same_letter(directory):
+   
+    assert directory.delete("sail") is True
+    assert directory.search("sail") == []
     
-    directory.insert("boat")
-    directory.insert("banana")
-    directory.insert("book")
 
-    assert directory.search("boat") == 0
-    assert directory.search("banana") == 1
-    assert directory.search("book") == 2
+    assert directory.delete("sail") is False
 
 
 def test_no_duplicates(directory):
-    directory.insert("boat")
-    directory.insert("boat")
+    offset1 = directory.insert("boat")
+    offset2 = directory.insert("boat")
 
-    index = directory._hash_letter("boat")
+    assert offset1 == offset2
+    assert directory.search("boat") == [offset1]
 
-    assert directory.table[index].count("boat") == 1
+
+def test_case_and_accents(directory):
+    lower = directory.insert("boat")
+    upper = directory.insert("Boat")
+    accent = directory.insert("canción")
+
+    
+    assert directory.search("BOAT") == [lower, upper]
+    assert directory.search("CANCION") == [accent]
+    assert directory.search("cancion") == [accent]
+
+  
+    assert directory.search("Boat", case_sensitive=True) == [upper]
+    assert directory.search("BOAT", case_sensitive=True) == []
+    assert directory.search("CANCION", case_sensitive=True) == []
 
 
 def test_persistence(tmp_path):
-    path = str(tmp_path / "test_db")
+    db_path = str(tmp_path / "test_data.log")
 
-    directory1 = AlphabeticalDirectory(path)
-    directory1.insert("boat")
+    directory1 = AlphabeticalDirectory(db_path)
+    offset = directory1.insert("boat")
     directory1.close()
 
-    directory2 = AlphabeticalDirectory(path)
+ 
+    directory2 = AlphabeticalDirectory(db_path)
     try:
-        assert directory2.search("boat") == 0
+        assert directory2.search("boat") == [offset]
     finally:
         directory2.close()
+
+
+def test_invalid_inputs(directory):
+  
+    with pytest.raises(ValueError):
+        directory.insert("")
     
+    with pytest.raises(TypeError):
+        directory.insert(123)
+
+
+def test_o1_performance(tmp_path):
+    db_path = str(tmp_path / "test_data.log")
+    
+   
+    dir_setup = AlphabeticalDirectory(db_path)
+    for i in range(100):
+        dir_setup.insert(f"word{i}")
+    dir_setup.close()
+
+  
+    dir_indexed = AlphabeticalDirectory(db_path, use_index=True)
+   
+    reads_before_index_search = dir_indexed.storage.records_read
+    
+    result_indexed = dir_indexed.search("word99")
+    
+    reads_after_index_search = dir_indexed.storage.records_read
+    
+  
+    dir_sequential = AlphabeticalDirectory(db_path, use_index=False)
+  
+    reads_before_seq_search = dir_sequential.storage.records_read
+    
+    result_sequential = dir_sequential.search("word99")
+    
+    reads_after_seq_search = dir_sequential.storage.records_read
+
+  
+    assert result_indexed == result_sequential, "Ambos modos deben dar el mismo resultado"
+    
+ 
+    assert reads_after_index_search - reads_before_index_search == 0
+    
+ 
+    assert reads_after_seq_search - reads_before_seq_search == 100
+    dir_indexed.close()
+    dir_sequential.close()
