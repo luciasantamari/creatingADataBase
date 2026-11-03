@@ -14,20 +14,20 @@ def normalize(word):
 
 
 class HashIndex:
-    """Índice en memoria: palabra normalizada -> {palabra exacta: offset}."""
+    """In-memory index: normalized word -> {exact word: offset}."""
 
     def __init__(self):
         self._index = {}
 
     def add(self, word, offset):
-        """Guarda la palabra exacta con su offset. Si ya existía, actualiza el offset."""
+        """Saves the exact word with its offset. Updates the offset if it already existed."""
         key = normalize(word)
         if key not in self._index:
             self._index[key] = {}
         self._index[key][word] = offset
 
     def find(self, word, case_sensitive=False):
-        """Devuelve una lista de offsets (el menor primero), o [] si no hay nada."""
+        """Returns a list of offsets (lowest first), or [] if no match is found."""
         variants = self._index.get(normalize(word))
         if variants is None:
             return []
@@ -38,7 +38,7 @@ class HashIndex:
         return sorted(variants.values())
 
     def remove(self, word):
-        """Borra la palabra exacta. Si no existe, no hace nada."""
+        """Deletes the exact word. Does nothing if it does not exist."""
         key = normalize(word)
         variants = self._index.get(key)
         if variants is None or word not in variants:
@@ -48,18 +48,18 @@ class HashIndex:
             del self._index[key]
 
     def clear(self):
-        """Vacía el índice entero."""
+        """Clears the entire index."""
         self._index.clear()
 
     def rebuild(self, records):
-        """Reconstruye el índice a partir de los registros de storage.records().
+        """Rebuilds the index from storage.records().
 
-        Cada registro es una tupla (offset, word, deleted), en orden de fichero.
-        Si deleted es False se añade la palabra; si es True se elimina.
+        Each record is a tuple (offset, word, deleted), in file order.
+        If deleted is False, the word is added; if True, it is removed.
         """
         self.clear()
         for offset, word, deleted in records:
             if deleted:
                 self.remove(word)
             else:
-                self.add(word, offset)    
+                self.add(word, offset)
