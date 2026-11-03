@@ -220,7 +220,7 @@ Implements the `Storage` class and the JSON Lines format proposed in §2 (steps 
 4. Add validation for invalid strings, define behavior for a missing file (treat as empty), and raise an explicit error for malformed records.
 5. Test Unicode strings, deletion markers, offsets, and persistence after reopening the file.
 
-**Status (3 November 2026):** tasks 1–4 are implemented in `storage.py` and merged in PR #11, with one `_parse_line()` shared by `read()` and `records()` for validating records. Checked by hand: offsets `0 35 70 109` for `boat`, `sail`, `canción`, `x`; Unicode round trip; deletion markers; reopening the file; a missing file yields nothing; and 11 corrupt-record cases plus `read()` past the end all raise `ValueError` with the offset. Still pending: task 5 (pytest tests, assigned to Miguelchi in `test_storage.py`), NFC conversion when appending (§2), and a review, because PR #11 has none recorded on GitHub. So nothing is DONE yet.
+**Status (3 November 2026):** tasks 1–4 are implemented in `storage.py` and merged in PR #11, with one `_parse_line()` shared by `read()` and `records()` for validating records. PR #12 adds NFC conversion in `append()`, also checked by hand: both spellings of `canción` are written identically. `bbdd.py` must still convert words to NFC before passing them to the index, because otherwise an exact search differs before and after a restart. Checked by hand: offsets `0 35 70 109` for `boat`, `sail`, `canción`, `x`; Unicode round trip; deletion markers; reopening the file; a missing file yields nothing; and 11 corrupt-record cases plus `read()` past the end all raise `ValueError` with the offset. Still pending: task 5 (pytest tests, assigned to Miguelchi in `test_storage.py`) and a review, because PRs #11 and #12 have none recorded on GitHub. So nothing is DONE yet.
 
 **Acceptance criteria**
 
@@ -290,7 +290,7 @@ Implements the `Storage` class and the JSON Lines format proposed in §2 (steps 
 3. Coordinate the record format and method signatures before module implementation.
 4. Implement the `use_index` switch: with the index off, `insert`, `search` and `delete` scan `storage.records()` sequentially.
 5. Add a command-line interface with `argparse`: `-c` for exact search and `--no-cache` to disable the index. When a search returns several offsets, print each matching word using `storage.read(offset)`.
-6. ~~Add a GitHub Actions workflow that runs `pytest` on pushes and pull requests.~~ Done: `.github/workflows/tests.yml`, the run on `7e7e2e3` passed. It only runs `tests.py`, so `test_hash_index.py` must be added now and `test_storage.py` when it exists. Plain `python -m pytest` would skip `tests.py`, because that name does not match `test_*.py`.
+6. ~~Add a GitHub Actions workflow that runs `pytest` on pushes and pull requests.~~ Done: `.github/workflows/tests.yml`, the run on `a36040f` passed. It only runs `tests.py`, so `test_hash_index.py` must be added now and `test_storage.py` when it exists. Plain `python -m pytest` would skip `tests.py`, because that name does not match `test_*.py`.
 7. Add a reproducible comparison of insertion and search speed between the original JSON implementation and the new append-only version. `benchmarks/compare.py` exists, but it labels the current `AlphabeticalDirectory` as "Append-only" although it still rewrites JSON. Fix the label or defer the comparison until the new engine exists.
 8. Update `README.md` to reflect what is implemented and what remains planned.
 
@@ -313,7 +313,7 @@ creatingADataBase/
 ├── TASKS.md                       # EXISTS — this file
 ├── bbdd.py                        # EXISTS — Hugo integrates modules
 ├── tests.py                       # EXISTS — Miguelchi rewrites and expands tests
-├── storage.py                     # EXISTS — Miguel (NFC and tests pending)
+├── storage.py                     # EXISTS — Miguel (tests pending)
 ├── hash_index.py                  # EXISTS — Lucía
 ├── test_hash_index.py             # EXISTS — Lucía
 ├── test_storage.py                # NEW — Miguelchi
@@ -355,4 +355,4 @@ creatingADataBase/
 
 A task is complete when its code is merged, its agreed acceptance criteria pass, its tests run locally and in CI, and another team member has reviewed the change.
 
-PRs #10 and #11 are merged, but that alone does not complete their tasks: neither has a review recorded on GitHub, and their tests do not all run in CI yet.
+PRs #10, #11 and #12 are merged, but that alone does not complete their tasks: none has a review recorded on GitHub, and their tests do not all run in CI yet.
