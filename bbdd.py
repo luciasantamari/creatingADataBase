@@ -1,14 +1,16 @@
 import json
 import os
-
+import unicodedata
+from storage import Storage
+from hash_index import HashIndex
 
 class AlphabeticalDirectory:
-    def __init__(self, filename="data.txt"):
-        self.filename = filename
-        self.size = 26
-        self.table = [[] for _ in range(self.size)]
-        self._load_from_file()
-
+    def __init__(self, filename:str = "data.log", use_index:bool =True):
+        self.use_index =use_index
+        self.storage =Storage(filename)
+        self.use_index=HashIndex()
+        
+        self.index.rebuild(self.storage.records())
     def close(self):
         pass
         
@@ -25,16 +27,17 @@ class AlphabeticalDirectory:
             with open(self.filename, "r") as f:
                 self.table = json.load(f)
 
-    def insert(self, word):
-        index = self._hash_letter(word)
-
-        if word in self.table[index]:
-            return self.table[index].index(word)
-
-        self.table[index].append(word)
-        self._save_to_file()
-
-        return len(self.table[index]) - 1
+    def insert(self, word: str)-> int:
+        word = unicodedata.normalize("NFC", word)
+        existing = self.index.find(word, case_sensitive=True)
+        
+        #give back the offset if already exist
+        if existing:
+            return existing[0] 
+        #if not exist
+        offset = self.storage.append(word)
+        self.index.add(word, offset)
+        return offset
 
     def search(self, word):
         index = self._hash_letter(word)
