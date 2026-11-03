@@ -1,5 +1,6 @@
 import json
 import os
+import unicodedata
 
 
 class Storage:
@@ -15,6 +16,8 @@ class Storage:
             raise TypeError("deleted debe ser un bool")
         if word == "":
             raise ValueError("word no puede estar vacío")
+        
+        word = unicodedata.normalize("NFC", word)
 
         # Registro como dict -> JSON (sin escapar la ó, ñ...) + salto de línea
         record = {
