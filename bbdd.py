@@ -23,16 +23,22 @@ class AlphabeticalDirectory:
 
     def insert(self, word: str)-> int:
         word = self.normalization(word)
-        existing = self.index.find(word, case_sensitive=True)
-        
-        #give back the offset if already exist
-        if existing:
-            return existing[0] 
-        #if not exist
-        offset = self.storage.append(word)
-        self.index.add(word, offset)
-        return offset
+        if self.use_index:
+            existing = self.index.find(word, case_sensitive=True)
+            if existing:
+                return existing[0]
+        else:
+            existing = None
+            for offset, rec_word, deleted in self.storage.records():
+                if rec_word == word:
+                    existing = None if deleted else offset
+            if existing is not None:   
+                return existing
 
+        offset = self.storage.append(word)
+        if self.use_index:
+            self.index.add(word, offset)
+        return offset
 
     def search(self, word: str, case_sensitive: bool = False) -> list[int]:#ToDo:Fragment code
         word = self.normalization(word)
@@ -65,7 +71,7 @@ class AlphabeticalDirectory:
                 
 
     def delete(self, word):
-    #word exist?
+        word = self.normalization(word)
         if self.use_index:
             if not self.index.find(word, case_sensitive=True): 
                 return False
